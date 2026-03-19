@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controladoria Geral — Gov. Edison Lobão / MA</title>
+  <meta name="description" content="Sistema de Controle de Processos de Pagamento — Prefeitura Municipal de Governador Edison Lobão / MA" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Reset base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* html e body ocupam 100% da viewport */
+    html {
+      height: 100%;
+      width: 100%;
+    }
+    body {
+      height: 100%;
+      width: 100%;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #f2f4f7;
+      overflow-x: hidden;
+    }
+
+    /* #root deve ocupar toda a tela */
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Garante que o primeiro filho do #root (o App) também expanda */
+    #root > div {
+      width: 100%;
+      flex: 1;
+    }
+
+    /* ── Tela de carregamento ─────────────────────────── */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #006000 0%, #003d00 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 9999; gap: 16px;
+      transition: opacity 0.5s ease;
+    }
+    #loading-screen.hide { opacity: 0; pointer-events: none; }
+
+    .ld-brasao {
+      width: 88px; height: 88px;
+      object-fit: contain;
+      animation: ld-pulse 2s ease-in-out infinite;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,.5));
+    }
+    .ld-brasao-placeholder {
+      width: 88px; height: 88px; border-radius: 50%;
+      background: rgba(239,209,3,.12); border: 2px solid rgba(239,209,3,.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px;
+      animation: ld-pulse 2s ease-in-out infinite;
+    }
+    @keyframes ld-pulse {
+      0%, 100% { transform: scale(1);    opacity: 1;   }
+      50%       { transform: scale(1.05); opacity: .88; }
+    }
+    .ld-spinner {
+      width: 34px; height: 34px;
+      border: 3px solid rgba(239,209,3,.18);
+      border-top-color: #EFD103;
+      border-radius: 50%;
+      animation: ld-spin .75s linear infinite;
+    }
+    @keyframes ld-spin { to { transform: rotate(360deg); } }
+
+    .ld-title {
+      font-size: 13px; font-weight: 800;
+      color: #EFD103; letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .ld-sub {
+      font-size: 11px; color: rgba(255,255,255,.4);
+      text-align: center; line-height: 1.5;
+    }
+
+    /* ── Scrollbar global ─────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e2d40; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2d4060; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tela de carregamento com brasão real -->
+  <div id="loading-screen">
+    <div id="ld-icon" class="ld-brasao-placeholder">🏛️</div>
+    <div class="ld-title">Controladoria Geral</div>
+    <div class="ld-sub">Prefeitura Municipal de Gov. Edison Lobão / MA</div>
+    <div class="ld-spinner"></div>
+    <div class="ld-sub">Carregando sistema v3.3…</div>
+  </div>
+
+  <!-- Ponto de montagem do React -->
+  <div id="root"></div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       DEPENDÊNCIAS — ordem obrigatória
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- 1. Brasão do município (define window.BRASAO_B64) — ANTES de tudo -->
+  <script src="brasao.js"></script>
+
+  <!-- 2. Troca placeholder pelo brasão real na tela de loading -->
+  <script>
+    (function () {
+      if (window.BRASAO_B64) {
+        var el = document.getElementById("ld-icon");
+        if (el) {
+          var img = document.createElement("img");
+          img.src    = window.BRASAO_B64;
+          img.className = "ld-brasao";
+          img.alt    = "Brasão Gov. Edison Lobão";
+          el.parentNode.replaceChild(img, el);
+        }
+      }
+    })();
+  </script>
+
+  <!-- 3. React 18 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+
+  <!-- 4. Recharts 2.12.7 — OBRIGATÓRIO para o Dashboard (gráficos) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js" crossorigin="anonymous"></script>
+
+  <!-- 5. XLSX — importar / exportar planilhas Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+
+  <!-- jsPDF, docx.js e sql.js são carregados automaticamente pelo app.js quando necessário -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SISTEMA PRINCIPAL
+       ═══════════════════════════════════════════════════════ -->
+  <script src="app.js"></script>
+
+  <!-- ═══════════════════════════════════════════════════════
+       INICIALIZAÇÃO
+       ═══════════════════════════════════════════════════════ -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* Expõe hooks do React no escopo global
+         (app.js usa useState, useEffect etc. como variáveis globais) */
+      var R = React;
+      window.useState     = R.useState;
+      window.useEffect    = R.useEffect;
+      window.useRef       = R.useRef;
+      window.useCallback  = R.useCallback;
+      window.useMemo      = R.useMemo;
+      window.useReducer   = R.useReducer;
+      window.useContext   = R.useContext;
+      window.createContext = R.createContext;
+
+      /* ── Monta o App ────────────────────────────────── */
+      function mountApp() {
+        var rootEl = document.getElementById("root");
+        if (!rootEl) { console.error("[Sistema] #root não encontrado."); return; }
+
+        if (typeof window.App !== "function") {
+          console.error("[Sistema] window.App não definido — verifique se app.js carregou.");
+          rootEl.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;' +
+            'min-height:100vh;width:100%;background:#003d00;flex-direction:column;' +
+            'gap:16px;padding:40px;text-align:center;font-family:system-ui;">' +
+            '<span style="font-size:52px">⚠️</span>' +
+            '<div style="font-size:17px;font-weight:800;color:#ef4444;">Erro ao carregar o sistema</div>' +
+            '<div style="font-size:13px;color:#94a3b8;max-width:460px;line-height:1.7;">' +
+            'O arquivo <b style="color:#fbbf24">app.js</b> não carregou ou tem erros.<br>' +
+            'Pressione <b style="color:#fbbf24">F12</b> → aba <b>Console</b> para ver o erro.' +
+            '</div></div>';
+          return;
+        }
+
+        try {
+          var root = ReactDOM.createRoot(rootEl);
+          root.render(React.createElement(window.App));
+
+          /* Remove tela de carregamento após montar */
+          var ls = document.getElementById("loading-screen");
+          if (ls) {
+            setTimeout(function () { ls.classList.add("hide"); }, 300);
+            setTimeout(function () { if (ls.parentNode) ls.remove(); }, 900);
+          }
+        } catch (err) {
+          console.error("[Sistema] Erro ao montar App:", err);
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", mountApp);
+      } else {
+        mountApp();
+      }
+    })();
+  </script>
+
+</body>
+</html>
